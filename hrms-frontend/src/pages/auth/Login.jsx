@@ -1,93 +1,73 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-const Login = () => {
-  const [formData, setFormData] = useState({ username: "", password: "" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import { extractErrorMessage } from "../../api/axiosClient";
+
+export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const redirectTo = location.state?.from?.pathname || "/";
+
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setSubmitting(true);
     try {
-      await login(formData);
-      navigate("/dashboard");
+      await login(username, password);
+      navigate(redirectTo, { replace: true });
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Invalid username or password"
-      );
+      setError(extractErrorMessage(err, "Invalid username or password."));
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
-          HRMS Login
-        </h2>
+    <div className="auth-shell">
+      <div className="auth-card">
+        <div className="auth-mark">HRMS Ledger</div>
+        <div className="auth-mark-sub">Sign in to the personnel &amp; payroll system</div>
 
-        {error && (
-          <div className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4 text-sm">
-            {error}
-          </div>
-        )}
+        {error && <div className="state-banner error">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Username
-            </label>
+        <form onSubmit={handleSubmit}>
+          <div className="auth-field">
+            <label htmlFor="username">Username</label>
             <input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
+          <div className="auth-field">
+            <label htmlFor="password">Password</label>
             <input
+              id="password"
               type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition"
-          >
-            {loading ? "Logging in..." : "Login"}
+          <button className="btn btn-primary auth-submit" type="submit" disabled={submitting}>
+            {submitting ? "Signing in…" : "Sign in"}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-600 mt-4">
-          Don't have an account?{" "}
-          <Link to="/register" className="text-blue-600 hover:underline">
-            Register
-          </Link>
-        </p>
+        <div className="auth-foot">
+          New here? <Link to="/register">Create an account</Link>
+        </div>
       </div>
     </div>
   );
-};
-
-export default Login;
+}

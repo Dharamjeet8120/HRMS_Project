@@ -1,32 +1,25 @@
-import { Navigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user, loading } = useAuth();
+// Wrap any route that requires a logged-in session. Optionally pass
+// `roles` to also require one of those roles (e.g. ["ROLE_ADMIN"]).
+export default function ProtectedRoute({ children, roles }) {
+  const { isAuthenticated, hasRole } = useAuth();
+  const location = useLocation();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
-      </div>
-    );
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.some((role) => user.roles.includes(role))) {
+  if (roles && roles.length > 0 && !hasRole(...roles)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-600 text-lg">
-          You don't have permission to access this page.
-        </p>
+      <div className="app-content">
+        <div className="state-banner error">
+          You don't have permission to view this page. Ask an admin or HR user for access.
+        </div>
       </div>
     );
   }
 
   return children;
-};
-
-export default ProtectedRoute;
+}

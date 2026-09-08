@@ -1,45 +1,42 @@
 import { NavLink } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-const navItems = [
-  { name: "Dashboard", path: "/dashboard" },
-  { name: "Departments", path: "/departments" },
-  { name: "Employees", path: "/employees" },
-  { name: "Attendance", path: "/attendance" },
-  { name: "Leaves", path: "/leaves" },
-  { name: "Payroll", path: "/payroll" },
+import { useAuth } from "../../hooks/useAuth";
+
+const NAV_ITEMS = [
+  { to: "/", label: "Dashboard", icon: "◧", end: true },
+  { to: "/employees", label: "Employees", icon: "☰" },
+  { to: "/departments", label: "Departments", icon: "▤" },
+  { to: "/attendance", label: "Attendance", icon: "✓" },
+  { to: "/leaves", label: "Leave requests", icon: "✎" },
+  { to: "/payroll", label: "Payroll", icon: "$" },
 ];
 
-const Sidebar = () => {
-  const { user } = useAuth();
+export default function Sidebar() {
+  const { isManager } = useAuth();
 
   return (
-    <aside className="w-64 bg-gray-900 text-white min-h-screen p-4">
-      <h1 className="text-xl font-bold mb-8 px-2">HRMS</h1>
-      <nav className="space-y-1">
-        {navItems.map((item) => (
+    <aside className="sidebar">
+      <div className="sidebar-brand">
+        <div className="sidebar-brand-mark">HRMS Ledger</div>
+        <div className="sidebar-brand-sub">Personnel &amp; payroll system</div>
+      </div>
+      <nav className="sidebar-nav">
+        {NAV_ITEMS.map((item) => (
           <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `block px-4 py-2 rounded-md transition ${
-                isActive
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-300 hover:bg-gray-800"
-              }`
-            }
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) => "sidebar-link" + (isActive ? " active" : "")}
           >
-            {item.name}
+            <span className="sidebar-icon">{item.icon}</span>
+            {item.label}
           </NavLink>
         ))}
       </nav>
-
-      {user && (
-        <div className="absolute bottom-4 left-4 text-xs text-gray-400">
-          Logged in as {user.username} ({user.roles.join(", ")})
-        </div>
-      )}
+      <div className="sidebar-foot">
+        {isManager ? "Admin / HR access" : "Employee access"}
+        <br />
+        HRMS · v1.0
+      </div>
     </aside>
   );
-};
-
-export default Sidebar;
+}

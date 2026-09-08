@@ -1,60 +1,65 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import { login as loginApi, register as registerApi } from "../api/authApi";
+import { createContext, useCallback, useMemo, useState } from "react";
+import * as authApi from "../api/authApi";
 
-const AuthContext = createContext();
+export const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+function readStoredUser() {
+  try {
+    const raw = localStorage.getItem("hrms_user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
-  // 👇 YAHI wala useEffect jo aapne pucha, isi jagah pe hai
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
-    if (token && storedUser && storedUser !== "undefined") {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
-      }
-    }
-    setLoading(false);
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(readStoredUser);
+  const [token, setToken] = useState(() => localStorage.getItem("hrms_token"));
+
+  const login = useCallback(async (username, password) => {
+    const data = await authApi.login(username, password);
+    // JwtResponseDTO: { token, username, roles }
+    const nextUser = { username: data.username, roles: data.roles || [] };
+    localStorage.setItem("hrms_token", data.token);
+    localStorage.setItem("hrms_user", JSON.stringify(nextUser));
+    setToken(data.token);
+    setUser(nextUser);
+    return nextUser;
   }, []);
 
-  const login = async (credentials) => {
-    const response = await loginApi(credentials);
-    const { token, username, roles } = response.data;
+  const register = useCallback((payload) => authApi.register(payload), []);
 
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify({ username, roles }));
-    setUser({ username, roles });
-
-    return response.data;
-  };
-
-  const register = async (userData) => {
-    const response = await registerApi(userData);
-    return response.data;
-  };
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const logout = useCallback(() => {
+    localStorage.removeItem("hrms_token");
+    localStorage.removeItem("hrms_user");
+    setToken(null);
     setUser(null);
-  };
+  }, []);
 
-  const hasRole = (role) => {
-    return user?.roles?.includes(role);
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{ user, loading, login, register, logout, hasRole }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const hasRole = useCallback(
+    (...roles) => {
+      if (!user?.roles) return false;
+      return roles.some((r) => user.roles.includes(r));
+    },
+    [user]
   );
-};
 
-export const useAuth = () => useContext(AuthContext);
+  const value = useMemo(
+    () => ({
+      user,
+      token,
+      isAuthenticated: Boolean(token),
+      login,
+      register,
+      logout,
+      hasRole,
+      // Admins and HR staff manage records; plain employees get a
+      // read-mostly view (apply/cancel leave, check in/out).
+      isManager: hasRole("ROLE_ADMIN", "ROLE_HR"),
+      isAdmin: hasRole("ROLE_ADMIN"),
+    }),
+    [user, token, login, register, logout, hasRole]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}

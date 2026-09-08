@@ -1,21 +1,27 @@
-import axiosInstance from "./axiosInstance";
+import axiosClient from "./axiosClient";
 
-export const getAllDepartments = () => axiosInstance.get("/departments");
+const BASE = "/dashboard";
 
-export const getDepartmentById = (id) =>
-    axiosInstance.get(`/departments/${id}`);
+export function getDashboardSummary() {
+  return axiosClient.get(`${BASE}/summary`).then((res) => res.data);
+}
 
-export const createDepartment = (data) =>
-    axiosInstance.post("/departments", data);
+export function getEmployeeStats() {
+  return axiosClient.get(`${BASE}/employees`).then((res) => res.data);
+}
 
-export const updateDepartment = (id, data) =>
-    axiosInstance.put(`/departments/${id}`, data);
+export function getDepartmentStats() {
+  return axiosClient.get(`${BASE}/departments`).then((res) => res.data);
+}
 
-export const deleteDepartment = (id) =>
-    axiosInstance.delete(`/departments/${id}`);
+export function getAttendanceStatsToday() {
+  return axiosClient.get(`${BASE}/attendance/today`).then((res) => res.data);
+}
 
-export const searchDepartmentByName = (name) =>
-    axiosInstance.get(`/departments/search/name/${name}`);
+export function getLeaveStatsCurrentMonth() {
+  return axiosClient.get(`${BASE}/leaves/current-month`).then((res) => res.data);
+}
 
-export const getDashboardSummary = () =>
-    axiosInstance.get("/dashboard/summary");
+export function getPayrollStatsCurrentMonth() {
+  return axiosClient.get(`${BASE}/payroll/current-month`).then((res) => res.data);
+}

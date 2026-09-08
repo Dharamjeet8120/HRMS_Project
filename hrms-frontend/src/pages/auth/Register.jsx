@@ -1,138 +1,140 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-const Register = () => {
-  const [formData, setFormData] = useState({
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import { extractErrorMessage } from "../../api/axiosClient";
+import { ROLE_OPTIONS } from "../../utils/constants";
+
+export default function Register() {
+  const { register } = useAuth();
+  const navigate = useNavigate();
+
+  const [form, setForm] = useState({
     username: "",
     password: "",
     email: "",
     roles: ["ROLE_EMPLOYEE"],
+    employeeId: "",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
-  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  function update(field, value) {
+    setForm((f) => ({ ...f, [field]: value }));
+  }
 
-  const handleRoleChange = (e) => {
-    setFormData({ ...formData, roles: [e.target.value] });
-  };
+  function toggleRole(role) {
+    setForm((f) => {
+      const has = f.roles.includes(role);
+      const roles = has ? f.roles.filter((r) => r !== role) : [...f.roles, role];
+      return { ...f, roles };
+    });
+  }
 
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setSuccess("");
-    setLoading(true);
-    try {
-      await register(formData);
-      setSuccess("Registration successful! Redirecting to login...");
-      setTimeout(() => navigate("/login"), 1500);
-    } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
-    } finally {
-      setLoading(false);
+
+    if (form.roles.length === 0) {
+      setError("Select at least one role.");
+      return;
     }
-  };
+
+    setSubmitting(true);
+    try {
+      await register({
+        username: form.username,
+        password: form.password,
+        email: form.email,
+        roles: form.roles,
+        employeeId: form.employeeId ? Number(form.employeeId) : null,
+      });
+      setSuccess("Account created. You can sign in now.");
+      setTimeout(() => navigate("/login"), 1200);
+    } catch (err) {
+      setError(extractErrorMessage(err, "Could not create the account."));
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
-          Create Account
-        </h2>
+    <div className="auth-shell">
+      <div className="auth-card">
+        <div className="auth-mark">Create account</div>
+        <div className="auth-mark-sub">Register a new HRMS user</div>
 
-        {error && (
-          <div className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4 text-sm">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="bg-green-100 text-green-700 px-4 py-2 rounded mb-4 text-sm">
-            {success}
-          </div>
-        )}
+        {error && <div className="state-banner error">{error}</div>}
+        {success && <div className="state-banner info">{success}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Username
-            </label>
+        <form onSubmit={handleSubmit}>
+          <div className="auth-field">
+            <label htmlFor="username">Username</label>
             <input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              required
+              id="username"
               minLength={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={form.username}
+              onChange={(e) => update("username", e.target.value)}
+              required
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
+          <div className="auth-field">
+            <label htmlFor="email">Email</label>
             <input
+              id="email"
               type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
+              value={form.email}
+              onChange={(e) => update("email", e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
+          <div className="auth-field">
+            <label htmlFor="password">Password</label>
             <input
+              id="password"
               type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
               minLength={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={form.password}
+              onChange={(e) => update("password", e.target.value)}
+              required
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Role
-            </label>
-            <select
-              onChange={handleRoleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ROLE_EMPLOYEE">Employee</option>
-              <option value="ROLE_HR">HR</option>
-              <option value="ROLE_ADMIN">Admin</option>
-            </select>
+          <div className="auth-field">
+            <label htmlFor="employeeId">Linked employee ID (optional)</label>
+            <input
+              id="employeeId"
+              type="number"
+              min="1"
+              value={form.employeeId}
+              onChange={(e) => update("employeeId", e.target.value)}
+              placeholder="Leave blank if none"
+            />
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition"
-          >
-            {loading ? "Registering..." : "Register"}
+          <div className="auth-field">
+            <label>Roles</label>
+            <div className="role-check-row">
+              {ROLE_OPTIONS.map((role) => (
+                <label className="role-check" key={role}>
+                  <input
+                    type="checkbox"
+                    checked={form.roles.includes(role)}
+                    onChange={() => toggleRole(role)}
+                  />
+                  {role.replace("ROLE_", "")}
+                </label>
+              ))}
+            </div>
+          </div>
+          <button className="btn btn-primary auth-submit" type="submit" disabled={submitting}>
+            {submitting ? "Creating…" : "Create account"}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-600 mt-4">
-          Already have an account?{" "}
-          <Link to="/login" className="text-blue-600 hover:underline">
-            Login
-          </Link>
-        </p>
+        <div className="auth-foot">
+          Already have an account? <Link to="/login">Sign in</Link>
+        </div>
       </div>
     </div>
   );
-};
-
-export default Register;
+}

@@ -1,24 +1,52 @@
-import axiosInstance from "./axiosInstance";
+import axiosClient from "./axiosClient";
 
-export const applyLeave = (data) => axiosInstance.post("/leaves", data);
+const BASE = "/leaves";
 
-export const getAllLeaves = () => axiosInstance.get("/leaves");
+export function getAllLeaves() {
+  return axiosClient.get(BASE).then((res) => res.data);
+}
 
-export const getLeavesByEmployee = (employeeId) =>
-  axiosInstance.get(`/leaves/employee/${employeeId}`);
+export function getLeaveById(id) {
+  return axiosClient.get(`${BASE}/${id}`).then((res) => res.data);
+}
 
-export const getLeavesByStatus = (status) =>
-  axiosInstance.get(`/leaves/status/${status}`);
+export function applyLeave(leave) {
+  return axiosClient.post(BASE, leave).then((res) => res.data);
+}
 
-export const approveLeave = (id, approvedBy) =>
-  axiosInstance.put(`/leaves/${id}/approve?approvedBy=${approvedBy}`);
+export function getLeavesByEmployee(employeeId) {
+  return axiosClient.get(`${BASE}/employee/${employeeId}`).then((res) => res.data);
+}
 
-export const rejectLeave = (id, approvedBy, rejectionReason) =>
-  axiosInstance.put(
-    `/leaves/${id}/reject?approvedBy=${approvedBy}&rejectionReason=${rejectionReason}`
-  );
+export function getLeavesByEmployeeAndStatus(employeeId, status) {
+  return axiosClient.get(`${BASE}/employee/${employeeId}/status/${status}`).then((res) => res.data);
+}
 
-export const cancelLeave = (id) =>
-  axiosInstance.put(`/leaves/${id}/cancel`);
+export function getLeavesByStatus(status) {
+  return axiosClient.get(`${BASE}/status/${status}`).then((res) => res.data);
+}
 
-export const deleteLeave = (id) => axiosInstance.delete(`/leaves/${id}`);
+export function approveLeave(id, approvedBy) {
+  return axiosClient.put(`${BASE}/${id}/approve`, null, { params: { approvedBy } }).then((res) => res.data);
+}
+
+export function rejectLeave(id, approvedBy, rejectionReason) {
+  return axiosClient
+    .put(`${BASE}/${id}/reject`, null, { params: { approvedBy, rejectionReason } })
+    .then((res) => res.data);
+}
+
+export function cancelLeave(id) {
+  return axiosClient.put(`${BASE}/${id}/cancel`).then((res) => res.data);
+}
+
+export function deleteLeave(id) {
+  return axiosClient.delete(`${BASE}/${id}`).then((res) => res.data);
+}
+
+export async function searchLeaves({ employeeId, status }) {
+  if (employeeId && status) return getLeavesByEmployeeAndStatus(employeeId, status);
+  if (employeeId) return getLeavesByEmployee(employeeId);
+  if (status) return getLeavesByStatus(status);
+  return getAllLeaves();
+}
